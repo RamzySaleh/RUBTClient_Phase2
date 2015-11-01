@@ -1,22 +1,16 @@
 package RUBTClient;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Scanner;
 
 import GivenTools.*;
 import RUBTClient.Tracker.Event;
@@ -27,12 +21,12 @@ public class Client{
 	public List<Peer> peers;
 	private TorrentInfo torrentInfo;
     private String peer_id;
-    private byte[] fileOut;
+    public byte[] fileOut;
     private int pieceLength;
     private int numPieces;
     private int fileLength;
     private int alreadyDownloaded = 0;
-    private File fp;
+    public File fp;
     private boolean[] pieceDownloaded;
    
     
@@ -42,6 +36,8 @@ public class Client{
     	this.peers = tracker.peers;
     	this.fp = fp;
 		this.fileOut = new byte[torrentInfo.file_length];
+		this.pieceLength = torrentInfo.piece_length;
+		this.fileLength = torrentInfo.file_length;
         numPieces = (int)Math.ceil((double)torrentInfo.file_length / (double)torrentInfo.piece_length);
         pieceDownloaded = new boolean[numPieces];
         this.peer_id = tracker.peer_id;
@@ -55,9 +51,6 @@ public class Client{
      */
     public void fetchFile(String fileName) throws Exception {
     	
-        // Byte array to store file pieces in
-        byte[] file = new byte[torrentInfo.file_length];
-
         // Select peer to connect to
         List<Peer> peersSelected = findAPeer();
 
@@ -69,6 +62,13 @@ public class Client{
         	// NEEDS WORK
         }
 
+        if (alreadyDownloaded == numPieces){
+        	System.out.println("Already Downloaded!");
+        	File fileN = new File(fileName);
+        	fp.renameTo(fileN);
+        	return;
+        }
+
         try {
             // Create socket and connect to peer
         	Peer peer0 = peersSelected.get(0);
@@ -78,6 +78,7 @@ public class Client{
             System.out.println("Connecting to peer: " + peer1.getIP());
             peer1.connectPeer();
 
+            
             // Create handshake
             Message handshake = new Message(this.peer_id.getBytes(), torrentInfo.info_hash.array());
 
@@ -123,6 +124,7 @@ public class Client{
                 length = peer1.in.readInt();
                 response_id1 = (int)peer1.in.readByte();
 
+               
                 if (response_id0 == 1 && response_id1 == 1)
                 {
                     System.out.println("Peer unchoked");
@@ -152,6 +154,7 @@ public class Client{
 
             while(count < numPieces && !userInput.equals("-1")){
             {
+
             	if(bufIn.ready()){
             		userInput = bufIn.readLine();
             		if (userInput.equals("-1")){
@@ -161,7 +164,6 @@ public class Client{
             	
             	i = findPieceToDownload();
             	if (i == -1) break;
-                System.out.println("Requesting piece " + i);
                 
                 int currentPieceLength;
                 
@@ -183,10 +185,10 @@ public class Client{
                 
                 byte[] piece = new byte[currentPieceLength];
                 
-                Peer peerToAsk = peer1;
-                if (i%3 == 0){
-                	peerToAsk = peer0;
-                }
+                Peer peerToAsk = peer0;
+                if (i%2 == 1){
+                	peerToAsk = peer1;
+                } 
                 
                 piece = downloadPiece(peerToAsk,i);
                 
@@ -281,33 +283,31 @@ public class Client{
     			System.out.println("Existing download!");
     			FileInputStream in = new FileInputStream(fp);
 				alreadyDownloaded = 0;
-				int index;
 				int length;
-				int endOfFile = 0;
-				byte[] intBuffer = new byte[4];
 				byte[] pieceData;
 				
 				while(alreadyDownloaded<numPieces){
 					
-					endOfFile = in.read(intBuffer);
-					
-					if (endOfFile == -1){
-						break;
-					} else {
-						index = byteArrToInt(intBuffer);
-						in.read(intBuffer);
-						length = byteArrToInt(intBuffer);
-						System.out.println("index = "+index);
-						System.out.println("length = "+length);
+						if (alreadyDownloaded==435){
+							length = fileLength%pieceLength;
+						} else {
+							length = pieceLength;
+						}
+						
 						pieceData = new byte[length];
 						in.read(pieceData);
+						if (!verifyPiece(pieceData,alreadyDownloaded)){ 
+							in.close(); 
+							return;
+						}
+						System.out.println("Verified SHA1 hash of piece at index = "+alreadyDownloaded+" = "+verifyPiece(pieceData,alreadyDownloaded));
 						tracker.downloaded += length;
-						System.out.println(tracker.downloaded+" <- tracker downloaded + file length-> "+tracker.torrentInfo.file_length);
 						tracker.left -= length;
-						System.arraycopy(pieceData, 0, fileOut, index*pieceLength, length);
-						pieceDownloaded[index] = true;
+						System.arraycopy(pieceData, 0, fileOut, alreadyDownloaded*length, pieceData.length);
+						pieceDownloaded[alreadyDownloaded] = true;
+						alreadyDownloaded++;
 					}
-				}
+				
 				in.close();
 				
 			} catch (Exception e) {
@@ -320,15 +320,13 @@ public class Client{
     	
     }
     
-    public synchronized void updateSaveFile(byte[] piece, int index){
+    public void updateSaveFile(byte[] piece, int index){
     	
     	try {
 			FileOutputStream out = new FileOutputStream(fp, true);
 	    	System.arraycopy(piece, 0, fileOut, index*pieceLength, piece.length);
 	    	tracker.downloaded += piece.length;
 	    	tracker.left -= piece.length;
-	    	out.write(intToByteArr(index));
-	    	out.write(intToByteArr(piece.length));
 	    	out.write(piece);
 	    	out.close();
 		} catch (Exception e) {
@@ -358,8 +356,8 @@ public class Client{
         int currentBlockLength;
         int length;
         int response_id;
-    	
-    	if (pieceIndex == numPieces - 1)
+
+        if (pieceIndex == numPieces - 1)
         {
             if (fileLength % pieceLength == 0)
             {

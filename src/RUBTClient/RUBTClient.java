@@ -1,19 +1,6 @@
 package RUBTClient;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.Socket;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import GivenTools.*;
 import RUBTClient.Tracker.Event;
 
 /**
@@ -37,7 +24,7 @@ public class RUBTClient
         Tracker tracker = new Tracker(args[0]);
         tracker.sendTrackerRequest(Event.NONE);
         
-        File fp = new File("File.dat");
+        File fp = new File("File.tmp");
         Client downloadClient = new Client(tracker, fp);
         downloadClient.checkFileState();
         downloadClient.fetchFile(args[1]);
