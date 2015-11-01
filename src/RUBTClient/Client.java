@@ -64,6 +64,7 @@ public class Client{
 
         if (alreadyDownloaded == numPieces){
         	System.out.println("Already Downloaded!");
+        	System.out.println("Download time = 0 seconds");
         	File fileN = new File(fileName);
         	fp.renameTo(fileN);
         	return;
@@ -142,7 +143,7 @@ public class Client{
             // Send HTTP GET to tracker to indicate download started
             tracker.sendTrackerRequest(Event.STARTED);
 
-            
+            long timeBegin = System.nanoTime();
 
             int i;
             int count = alreadyDownloaded;
@@ -154,7 +155,7 @@ public class Client{
 
             while(count < numPieces && !userInput.equals("-1")){
             {
-
+            	            	
             	if(bufIn.ready()){
             		userInput = bufIn.readLine();
             		if (userInput.equals("-1")){
@@ -163,8 +164,14 @@ public class Client{
             	}
             	
             	i = findPieceToDownload();
+            	
             	if (i == -1) break;
                 
+            	
+            	if(i%10 == 0 && count!= 0){
+            		System.out.println("Enter -1 and enter to cancel download -->");
+            	}
+            	
                 int currentPieceLength;
                 
                 if (i == numPieces - 1)
@@ -208,11 +215,12 @@ public class Client{
         }
             peer0.disconnectPeer();
             peer1.disconnectPeer();
+
+        	long timeEnd = System.nanoTime();
+        	
+        	System.out.println("Download time = "+(timeEnd-timeBegin)/1000000000+" seconds");
         }
         finally{
-
-        	System.out.println("Download complete");
-
         	saveCompletedFileToDisk(fileName);
             // Send HTTP GET to tracker to indicate download is complete
         	tracker.sendTrackerRequest(Event.COMPLETED);
