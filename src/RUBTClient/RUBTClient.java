@@ -29,6 +29,7 @@ public class RUBTClient
         downloadClient.checkFileState();
         downloadClient.fetchFile(args[1]);
 
+        tracker.sendTrackerRequest(Event.STOPPED);
 
     }
 }
