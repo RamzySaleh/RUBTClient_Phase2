@@ -11,36 +11,41 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import GivenTools.*;
 import RUBTClient.Tracker.Event;
 
 public class Client{
 	
-	public Tracker tracker;
-	public List<Peer> peers;
-	private TorrentInfo torrentInfo;
-    private String peer_id;
-    public byte[] fileOut;
-    private int pieceLength;
-    private int numPieces;
-    private int fileLength;
-    private int alreadyDownloaded = 0;
-    public File fp;
-    private boolean[] pieceDownloaded;
+	public static Tracker tracker;
+	public static List<Peer> peers;
+	private static TorrentInfo torrentInfo;
+    private static String peer_id;
+    public static byte[] fileOut;
+    private static int pieceLength;
+    private static int numPieces;
+    private static int fileLength;
+    private static int alreadyDownloaded;
+    public static File fp;
+    public static boolean[] pieceDownloaded;
+    private static String userInput = "";
    
     
     public Client (Tracker tracker, File fp){
-    	this.tracker = tracker;
-    	this.torrentInfo = tracker.torrentInfo;
-    	this.peers = tracker.peers;
-    	this.fp = fp;
-		this.fileOut = new byte[torrentInfo.file_length];
-		this.pieceLength = torrentInfo.piece_length;
-		this.fileLength = torrentInfo.file_length;
+    	Client.tracker = tracker;
+    	Client.torrentInfo = tracker.torrentInfo;
+    	Client.peers = tracker.peers;
+    	Client.fp = fp;
+		Client.fileOut = new byte[torrentInfo.file_length];
+		Client.pieceLength = torrentInfo.piece_length;
+		Client.fileLength = torrentInfo.file_length;
+		Client.alreadyDownloaded = 0;
         numPieces = (int)Math.ceil((double)torrentInfo.file_length / (double)torrentInfo.piece_length);
         pieceDownloaded = new boolean[numPieces];
-        this.peer_id = tracker.peer_id;
+        Client.peer_id = tracker.peer_id;
 				
 	}
 
@@ -49,57 +54,102 @@ public class Client{
      * @return the full file as a byte array
      * @throws Exception
      */
-    public void fetchFile(String fileName) throws Exception {
+    public synchronized void fetchFile(String fileName) throws Exception {
     	
         // Select peer to connect to
-        List<Peer> peersSelected = findAPeer();
+        final List<Peer> peersSelected = findAPeer();
 
         if (peersSelected == null)
         {
             throw new Exception("Could not connect to a peer!");
         } else if (peersSelected.size() == 1) {
+        	
         	System.out.println("Only found one peer. Downloading from this peer only");
-        	// NEEDS WORK
+        	
+            // Send HTTP GET to tracker to indicate download started
+        	tracker.sendTrackerRequest(Event.STARTED);
+         	long timeBegin = System.nanoTime();
+        	downloadPiece(peersSelected.get(0));
+        	long timeEnd = System.nanoTime();
+        	System.out.println("Download time = "+(timeEnd-timeBegin)/1000000000+" seconds");
+   
+        	saveCompletedFileToDisk(fileName);
+            // Send HTTP GET to tracker to indicate download is complete
+        	tracker.sendTrackerRequest(Event.COMPLETED);
         }
 
         if (alreadyDownloaded == numPieces){
         	System.out.println("Already Downloaded!");
-        	System.out.println("Download time = 0 seconds");
+        	System.out.println("Download time = 0 seconds!!!!!");
         	File fileN = new File(fileName);
         	fp.renameTo(fileN);
         	return;
         }
 
+        	
+        
+
+        // Send HTTP GET to tracker to indicate download started
+        tracker.sendTrackerRequest(Event.STARTED);
+        	long timeBegin = System.nanoTime();
+        	
+        	ExecutorService threadPool = Executors.newFixedThreadPool(2);
+
+        	for (int i = 0; i < 2; i++) {
+        		final int j = i;
+        	    threadPool.submit(
+        	    		new Runnable() {public void run() { try {
+        	    			downloadPiece(peersSelected.get(j));
+						} catch (Exception e) {
+							e.printStackTrace();
+						} 
+        	    		
+        	    		}} );
+        	
+        	}
+        	threadPool.shutdown();
+            threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            
+        	long timeEnd = System.nanoTime();
+        	System.out.println("Download time = "+(timeEnd-timeBegin)/1000000000+" seconds");
+        
+        	if(userInput.equals("-1")){
+                // Send HTTP GET to tracker to indicate download is stopped
+            	tracker.sendTrackerRequest(Event.STOPPED);
+
+        	} else {
+        		saveCompletedFileToDisk(fileName);
+                // Send HTTP GET to tracker to indicate download is complete
+            	tracker.sendTrackerRequest(Event.COMPLETED);
+        	}
+        
+
+    }
+    
+
+    private static void downloadPiece(Peer peer) throws Exception{
+
         try {
             // Create socket and connect to peer
-        	Peer peer0 = peersSelected.get(0);
-        	Peer peer1 = peersSelected.get(1);
-            System.out.println("Connecting to peer: " + peer0.getIP());
-            peer0.connectPeer();
-            System.out.println("Connecting to peer: " + peer1.getIP());
-            peer1.connectPeer();
+            System.out.println("Connecting to peer: " + peer.getIP());
+            peer.connectPeer();
 
             
             // Create handshake
-            Message handshake = new Message(this.peer_id.getBytes(), torrentInfo.info_hash.array());
+            Message handshake = new Message(peer_id.getBytes(), torrentInfo.info_hash.array());
 
             // Send handshake to peers
             System.out.println("Sending handshake");
-            peer0.out.write(handshake.message);
-            peer1.out.write(handshake.message);
-            
-            peer0.out.flush();
-            peer1.out.flush();
+            peer.out.write(handshake.message);
+            peer.out.flush();
 
             // Receive handshake from peers
-            byte[] handshakeResponse0 = new byte[68];
-            byte[] handshakeResponse1 = new byte[68];
+            byte[] handshakeResponse = new byte[68];
             
-            peer0.in.read(handshakeResponse0);
-            peer1.in.read(handshakeResponse1);
+            peer.in.read(handshakeResponse);
 
             // Verify handshake
-            if (!verifyHandshake(handshakeResponse0) || !verifyHandshake(handshakeResponse1)) {
+            if (!verifyHandshake(handshakeResponse)) {
                 throw new Exception("Could not verify handshake");
             }
 
@@ -107,26 +157,20 @@ public class Client{
             Message interested = new Message((byte) 2, 1, -1, "-1".getBytes(), -1, -1, -1,-1, -1, "-1".getBytes());
 
             int length;
-            int response_id0;
-            int response_id1;
+            int response_id;
 
             // Send interested message until peer unchokes
             for (int i = 0; i < 20; i++)
             {
-            	peer0.out.write(interested.message);
-            	peer1.out.write(interested.message);
+            	peer.out.write(interested.message);
             	
-                peer0.out.flush();
-                peer1.out.flush();
+                peer.out.flush();
                 
                 
-                length = peer0.in.readInt();
-                response_id0 =  (int)peer0.in.readByte();
-                length = peer1.in.readInt();
-                response_id1 = (int)peer1.in.readByte();
-
+                length = peer.in.readInt();
+                response_id =  (int)peer.in.readByte();
                
-                if (response_id0 == 1 && response_id1 == 1)
+                if (response_id == 1)
                 {
                     System.out.println("Peer unchoked");
                     break;
@@ -140,10 +184,7 @@ public class Client{
                 }
             }
 
-            // Send HTTP GET to tracker to indicate download started
-            tracker.sendTrackerRequest(Event.STARTED);
 
-            long timeBegin = System.nanoTime();
 
             int i;
             int count = alreadyDownloaded;
@@ -151,11 +192,9 @@ public class Client{
             BufferedReader bufIn = new BufferedReader(new InputStreamReader(System.in));
             System.out.println("Enter -1 and enter to cancel download -->");
             
-            String userInput = "";
 
             while(count < numPieces && !userInput.equals("-1")){
-            {
-            	            	
+            
             	if(bufIn.ready()){
             		userInput = bufIn.readLine();
             		if (userInput.equals("-1")){
@@ -165,7 +204,7 @@ public class Client{
             	
             	i = findPieceToDownload();
             	
-            	if (i == -1) break;
+            	if (i == -1) return;
                 
             	
             	if(i%10 == 0 && count!= 0){
@@ -192,17 +231,14 @@ public class Client{
                 
                 byte[] piece = new byte[currentPieceLength];
                 
-                Peer peerToAsk = peer0;
-                if (i%2 == 1){
-                	peerToAsk = peer1;
-                } 
+               
                 
-                piece = downloadPiece(peerToAsk,i);
+                piece = downloadPiece(peer,i);
                 
                 // Verify SHA-1 for piece
                 if (verifyPiece(piece, i))
                 {
-                    System.out.println("Piece #"+i+" verified, downloaded from: "+peerToAsk.getIP());
+                    System.out.println("Piece #"+i+" verified, downloaded from: "+peer.getIP());
                     pieceDownloaded[i] = true;
                     System.arraycopy(piece, 0, fileOut, i * pieceLength, currentPieceLength);
                     updateSaveFile(piece,i);
@@ -210,29 +246,23 @@ public class Client{
                 else
                 {
                     throw new Exception("Incorrect piece SHA-1");
-                }
+                }   
+                count++;
             }
         }
-            peer0.disconnectPeer();
-            peer1.disconnectPeer();
+        
+            finally{
 
-        	long timeEnd = System.nanoTime();
-        	
-        	System.out.println("Download time = "+(timeEnd-timeBegin)/1000000000+" seconds");
-        }
-        finally{
-        	saveCompletedFileToDisk(fileName);
-            // Send HTTP GET to tracker to indicate download is complete
-        	tracker.sendTrackerRequest(Event.COMPLETED);
-        }
-
+                peer.disconnectPeer();
+            }
+    	
     }
 
     /**
      * Choose peer from peer list to connect to
      * @return Peer object of peer to connect to
      */
-    private List<Peer> findAPeer(){
+    private static List<Peer> findAPeer(){
 
     	List<Peer> peersToDownload = new LinkedList<Peer>();
     	if (peers == null) System.out.println("Peers is null!");
@@ -254,7 +284,7 @@ public class Client{
      * @param handshake peer response to handshake message
      * @return true if info_hash matches
      */
-    private boolean verifyHandshake(byte[] handshake)
+    private static boolean verifyHandshake(byte[] handshake)
     {
         byte[] info_hash = new byte[20];
 
@@ -269,7 +299,7 @@ public class Client{
      * @param index index of piece
      * @return true if SHA-1 hashes match
      */
-    private boolean verifyPiece(byte[] piece, int index)
+    private static boolean verifyPiece(byte[] piece, int index)
     {
         byte sha1Piece[] = new byte[20];
         try{
@@ -293,10 +323,11 @@ public class Client{
 				alreadyDownloaded = 0;
 				int length;
 				byte[] pieceData;
+				int countChecked = 0;
 				
-				while(alreadyDownloaded<numPieces){
+				while(countChecked<numPieces){
 					
-						if (alreadyDownloaded==435){
+						if (countChecked==435){
 							length = fileLength%pieceLength;
 						} else {
 							length = pieceLength;
@@ -304,16 +335,21 @@ public class Client{
 						
 						pieceData = new byte[length];
 						in.read(pieceData);
-						if (!verifyPiece(pieceData,alreadyDownloaded)){ 
-							in.close(); 
-							return;
+						
+						if (verifyPiece(pieceData,countChecked)){ 
+							System.out.println("Verified SHA1 hash of piece at index = "+countChecked+" = "+verifyPiece(pieceData,countChecked));
+							pieceDownloaded[countChecked] = true;
+							System.arraycopy(pieceData, 0, fileOut, countChecked*length, pieceData.length);
+							alreadyDownloaded++;
+							tracker.downloaded += length;
+							tracker.left -= length;
+
+						} else {
+							pieceDownloaded[countChecked] = false;	
 						}
-						System.out.println("Verified SHA1 hash of piece at index = "+alreadyDownloaded+" = "+verifyPiece(pieceData,alreadyDownloaded));
-						tracker.downloaded += length;
-						tracker.left -= length;
-						System.arraycopy(pieceData, 0, fileOut, alreadyDownloaded*length, pieceData.length);
-						pieceDownloaded[alreadyDownloaded] = true;
-						alreadyDownloaded++;
+						
+						countChecked++;
+
 					}
 				
 				in.close();
@@ -328,7 +364,7 @@ public class Client{
     	
     }
     
-    public void updateSaveFile(byte[] piece, int index){
+    public static synchronized void updateSaveFile(byte[] piece, int index){
     	
     	try {
 			FileOutputStream out = new FileOutputStream(fp, true);
@@ -343,7 +379,7 @@ public class Client{
     	
     }
     
-    private int findPieceToDownload(){
+    private static synchronized int findPieceToDownload(){
     	
     	for (int k = 0; k<numPieces; k++){
     		if(pieceDownloaded[k] == false){
@@ -354,7 +390,7 @@ public class Client{
     	return -1;
     }
     
-    private byte[] downloadPiece(Peer peer, int pieceIndex){
+    private static byte[] downloadPiece(Peer peer, int pieceIndex){
     	byte[] piece;
     	pieceLength = torrentInfo.piece_length;
         fileLength = torrentInfo.file_length;
@@ -434,12 +470,13 @@ public class Client{
     	
     }
     
-    private void saveCompletedFileToDisk(String fileName){
+    private static synchronized void saveCompletedFileToDisk(String fileName){
     	
     	 try{
              FileOutputStream fileOutStream = new FileOutputStream(new File(fileName));
              fileOutStream.write(fileOut);
              fileOutStream.close();
+             fp.delete();
          } catch (Exception e){
              System.out.println("Error writing file to hard disk. "+e);
          }
