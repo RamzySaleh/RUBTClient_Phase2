@@ -1,6 +1,7 @@
 package RUBTClient;
 
 import java.io.*;
+
 import RUBTClient.Tracker.Event;
 
 /**
@@ -21,29 +22,55 @@ public class RUBTClient
     		return;
     	}
     	
-        Tracker tracker = new Tracker(args[0]);
+        final Tracker tracker = new Tracker(args[0]);
         tracker.sendTrackerRequest(Event.NONE);
+        
+        
+        System.out.println(tracker.interval+"=tracker interval");
+
+        System.out.println(tracker.downloaded+"=tracker downloaded");
+
+        final int trackerUpdateInterval = Math.min(tracker.interval/2, 180/2);
         
         File fp = new File("File.tmp");
         
         final Client downloadClient = new Client(tracker, fp);
         downloadClient.checkFileState();
-        final Server server = new Server();
+        
 
+        final Server server = new Server();
+        
+        
         Thread thread1 = new Thread(){
         	{downloadClient.fetchFile(args[1]);}
         };
         Thread thread2 = new Thread(){
         	{server.run();}
+        }; 
+        Thread thread3 = new Thread(){
+        	{updateTracker(tracker, trackerUpdateInterval);}
         };
         
         thread1.start();
         thread2.start();
+        thread3.start();
         
         thread1.join();
         thread2.join();
+        thread3.join();
         
         tracker.sendTrackerRequest(Event.STOPPED);
 
+    }
+    
+    public static void updateTracker(Tracker tracker, int trackerUpdateInterval){
+    	while(true){
+    		try {
+				Thread.sleep(1000*trackerUpdateInterval);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+    		tracker.sendTrackerRequest(Event.NONE);
+    	}
     }
 }
