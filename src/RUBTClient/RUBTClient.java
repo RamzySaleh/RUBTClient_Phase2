@@ -25,10 +25,6 @@ public class RUBTClient
         final Tracker tracker = new Tracker(args[0]);
         tracker.sendTrackerRequest(Event.NONE);
         
-        
-        System.out.println(tracker.interval+"=tracker interval");
-
-        System.out.println(tracker.downloaded+"=tracker downloaded");
 
         final int trackerUpdateInterval = Math.min(tracker.interval/2, 180/2);
         
@@ -38,7 +34,7 @@ public class RUBTClient
         downloadClient.checkFileState();
         
 
-        final Server server = new Server();
+        final Server server = new Server(tracker, downloadClient);
         
         
         Thread thread1 = new Thread(){
@@ -66,7 +62,7 @@ public class RUBTClient
     public static void updateTracker(Tracker tracker, int trackerUpdateInterval){
     	while(true){
     		try {
-				Thread.sleep(1000*trackerUpdateInterval);
+				Thread.sleep(1000*(trackerUpdateInterval+1));
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
