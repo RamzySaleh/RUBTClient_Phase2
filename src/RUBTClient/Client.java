@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class Client{
     private static int alreadyDownloaded;
     public static File fp;
     public static boolean[] pieceDownloaded;
+    public static ArrayList<Integer> listPiecesDownloaded;
     private static String userInput = "";
    
     
@@ -46,6 +48,7 @@ public class Client{
         numPieces = (int)Math.ceil((double)torrentInfo.file_length / (double)torrentInfo.piece_length);
         pieceDownloaded = new boolean[numPieces];
         Client.peer_id = tracker.peer_id;
+        listPiecesDownloaded=new ArrayList(numPieces);
 				
 	}
 
@@ -339,6 +342,7 @@ public class Client{
 						if (verifyPiece(pieceData,countChecked)){ 
 							System.out.println("Verified SHA1 hash of piece at index = "+countChecked+" = "+verifyPiece(pieceData,countChecked));
 							pieceDownloaded[countChecked] = true;
+							listPiecesDownloaded.add(countChecked);
 							System.arraycopy(pieceData, 0, fileOut, countChecked*length, pieceData.length);
 							alreadyDownloaded++;
 							tracker.downloaded += length;
