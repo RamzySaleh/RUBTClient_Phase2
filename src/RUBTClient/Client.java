@@ -60,7 +60,7 @@ public class Client{
     public synchronized void fetchFile(String fileName) throws Exception {
     	
         // Select peer to connect to
-        final List<Peer> peersSelected = findAPeer();
+        final List<Peer> peersSelected = findPeers();
 
         if (peersSelected == null)
         {
@@ -92,8 +92,8 @@ public class Client{
         	
         
 
-        // Send HTTP GET to tracker to indicate download started
-        tracker.sendTrackerRequest(Event.STARTED);
+        	// Send HTTP GET to tracker to indicate download started
+        	tracker.sendTrackerRequest(Event.STARTED);
         	long timeBegin = System.nanoTime();
         	
         	ExecutorService threadPool = Executors.newFixedThreadPool(2);
@@ -262,10 +262,10 @@ public class Client{
     }
 
     /**
-     * Choose peer from peer list to connect to
-     * @return Peer object of peer to connect to
+     * Choose peers from peer list to connect to
+     * @return List of peers to connect to
      */
-    private static List<Peer> findAPeer(){
+    private static List<Peer> findPeers(){
 
     	List<Peer> peersToDownload = new LinkedList<Peer>();
     	if (peers == null) System.out.println("Peers is null!");
@@ -316,6 +316,15 @@ public class Client{
 
         return Arrays.equals(sha1Piece, hashFromTor);
     }
+    
+    /**
+     * Check if the download has been previously started.
+     * Load the pieces from .tmp file, first verify the SHA1 hash, and them to the 
+     * byte array which contains the file's byte values. This byte array will eventually 
+     * contain all the pieces (after the rest of the file downloads) and is saved to the
+     * user's directory.
+     * 
+     */
 
     public void checkFileState(){
     	
@@ -368,6 +377,14 @@ public class Client{
     	
     }
     
+    /**
+     * This saves pieces, one by one, to the temporary file.
+     * Then, it saves the piece into the file byte array.
+     * Update the tracker download and left values.
+     * 
+     * @param piece, piece to save in the .tmp file and byte array
+     * @param index, index of that piece
+     */
     public static synchronized void updateSaveFile(byte[] piece, int index){
     	
     	try {
@@ -383,6 +400,14 @@ public class Client{
     	
     }
     
+    /**
+     * 
+     * Search the boolean array and find the next piece to download.
+     * If we already have the piece at index k, pieceDownloaded[k] = true;
+     * If we don't already have it, it is false.
+     * 
+     * @return index of piece to download
+     */
     private static synchronized int findPieceToDownload(){
     	
     	for (int k = 0; k<numPieces; k++){
@@ -394,6 +419,14 @@ public class Client{
     	return -1;
     }
     
+    /**
+     * 
+     * Downloads a specific piece from a peer, subpiece by subpiece.
+     * 
+     * @param peer, peer to download piece from
+     * @param pieceIndex, index of the piece that we want
+     * @return returns the byte[] of the piece
+     */
     private static byte[] downloadPiece(Peer peer, int pieceIndex){
     	byte[] piece;
     	pieceLength = torrentInfo.piece_length;
@@ -474,6 +507,14 @@ public class Client{
     	
     }
     
+    /**
+     * 
+     * This is executed when all the pieces are done downloading. This saves
+     * the file to the directory and deletes the temporary file. 
+     * 
+     * @param fileName, what we want to name the file
+     * 
+     */
     private static synchronized void saveCompletedFileToDisk(String fileName){
     	
     	 try{
@@ -487,6 +528,13 @@ public class Client{
     	
     }
     
+    /**
+     * 
+     * Helper method to convert a byte[] to its integer representation.
+     * 
+     * @param byteArr, the byte array
+     * @return integer representation of byte array
+     */
     private int byteArrToInt(byte[] byteArr){
     	return ByteBuffer.wrap(byteArr).getInt();
     }
