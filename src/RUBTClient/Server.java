@@ -47,5 +47,18 @@ public class Server extends Thread{
 			catch(IOException e){
 				System.out.println("could not listen on port");
 			}
+		ArrayList<Socket> peerSockets= new ArrayList<Socket>(5);
+		int ind=0;
+		while(true){
+			try{
+			peerSockets.add(ind,serveSocket.accept());
+			}catch(IOException e){
+				e.printStackTrace();
+				System.out.println("something went wrong with setting up a peer connection with server");
+			}
+			new ServerConnection(this,peerSockets.get(ind));
+			ind++;
+		}
+		
 	}
 }
