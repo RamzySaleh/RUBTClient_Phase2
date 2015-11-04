@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -124,6 +125,7 @@ public class Client{
         		saveCompletedFileToDisk(fileName);
                 // Send HTTP GET to tracker to indicate download is complete
             	tracker.sendTrackerRequest(Event.COMPLETED);
+            	waitForUserInput();
         	}
         
 
@@ -525,6 +527,26 @@ public class Client{
          } catch (Exception e){
              System.out.println("Error writing file to hard disk. "+e);
          }
+    	
+    }
+    
+    private static void waitForUserInput(){
+    	
+    	BufferedReader bufIn = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Enter -1 and enter to cancel download -->");
+        
+        while(!userInput.equals("-1")){
+        	try {
+				if(bufIn.ready()){
+					userInput = bufIn.readLine();
+					if (userInput.equals("-1")){
+						break;
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+        }
     	
     }
     

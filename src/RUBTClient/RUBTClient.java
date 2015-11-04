@@ -22,7 +22,7 @@ public class RUBTClient
     		return;
     	}
     	
-        final Tracker tracker = new Tracker(args[0]);
+    	final Tracker tracker = new Tracker(args[0]);
         tracker.sendTrackerRequest(Event.NONE);
         
 
@@ -52,8 +52,6 @@ public class RUBTClient
         thread3.start();
         
         thread1.join();
-        thread2.join();
-        thread3.join();
         
         tracker.sendTrackerRequest(Event.STOPPED);
 
