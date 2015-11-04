@@ -38,6 +38,7 @@ public class Server extends Thread{
 		numPieces = (int)Math.ceil((double)torrentInfo.file_length / (double)torrentInfo.piece_length);
 		pieceDownloaded=downloadClient.pieceDownloaded;
 		listPiecesDownloaded=downloadClient.listPiecesDownloaded;
+		Server.fileOut = downloadClient.fileOut;
 		}
 	
 	public void run(){
