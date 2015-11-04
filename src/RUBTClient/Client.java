@@ -287,7 +287,7 @@ public class Client{
      * @param handshake peer response to handshake message
      * @return true if info_hash matches
      */
-    private static boolean verifyHandshake(byte[] handshake)
+    public static boolean verifyHandshake(byte[] handshake)
     {
         byte[] info_hash = new byte[20];
 
