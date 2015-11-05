@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import GivenTools.*;
 import RUBTClient.Tracker.Event;
 
-public class Client{
+public class Client implements Runnable{
 	
 	public static Tracker tracker;
 	public static List<Peer> peers;
@@ -31,13 +31,14 @@ public class Client{
     private static int numPieces;
     private static int fileLength;
     private static int alreadyDownloaded;
+    private static String fileName;
     public static File fp;
     public static boolean[] pieceDownloaded;
     public static ArrayList<Integer> listPiecesDownloaded;
     private static String userInput = "";
    
     
-    public Client (Tracker tracker, File fp){
+    public Client (Tracker tracker, File fp, String fileName){
     	Client.tracker = tracker;
     	Client.torrentInfo = tracker.torrentInfo;
     	Client.peers = tracker.peers;
@@ -49,10 +50,18 @@ public class Client{
         numPieces = (int)Math.ceil((double)torrentInfo.file_length / (double)torrentInfo.piece_length);
         pieceDownloaded = new boolean[numPieces];
         Client.peer_id = tracker.peer_id;
-        listPiecesDownloaded=new ArrayList(numPieces);
+        listPiecesDownloaded=new ArrayList<Integer>(numPieces);
+        Client.fileName = fileName;
 				
 	}
 
+    public void run(){
+    	try {
+			fetchFile(fileName);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
     /**
      * Download the file from a peer
      * @return the full file as a byte array
@@ -161,7 +170,8 @@ public class Client{
             // Create interested message
             Message interested = new Message((byte) 2, 1, -1, "-1".getBytes(), -1, -1, -1,-1, -1, "-1".getBytes());
 
-            int length;
+            @SuppressWarnings("unused")
+			int length;
             int response_id;
 
             // Send interested message until peer unchokes
@@ -560,24 +570,4 @@ public class Client{
     public static int byteArrToInt(byte[] byteArr){
     	return ByteBuffer.wrap(byteArr).getInt();
     }
-    
-	/**
-	 * 
-	 * Helper method to represent integers as 4-byte big-endian arrays.
-	 * 
-	 * BigInteger.valueof(i).toByteArray() will create a byte array of smallest 
-	 * possible size to represent i. 
-	 * 
-	 * @param i - integer which we wish to convert to 4-byte big-endian
-	 * @return byte array representing integer
-	 * 
-	 */
-	private byte[] intToByteArr(int i){
-		
-		byte[] byteArray = {(byte)(i >>> 24), (byte)(i >>> 16), (byte) (i >>> 8), (byte)(i)};
-		return byteArray;
-		
-	}
-	
-	
 }

@@ -1,8 +1,6 @@
 package RUBTClient;
 
 import java.io.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import RUBTClient.Tracker.Event;
 
@@ -32,66 +30,55 @@ public class RUBTClient
         
         File fp = new File("File.tmp");
         
-        final Client downloadClient = new Client(tracker, fp);
+        final Client downloadClient = new Client(tracker, fp, args[1]);
         downloadClient.checkFileState();
         
 
         final Server server = new Server(tracker, downloadClient);
         
-        /**
-        ExecutorService pool_Download_Upload_Tracker = Executors.newFixedThreadPool(3);
         
-        pool_Download_Upload_Tracker.submit(
-	    		new Runnable() {public void run() { 
-	    			try {downloadClient.fetchFile(args[1]);} 
-	    			catch (Exception e) { e.printStackTrace(); } 
-	    		}} 
-	    );
-        
-        pool_Download_Upload_Tracker.submit(
-	    		new Runnable() {public void run() { 
-	    			try {server.run();} 
-	    			catch (Exception e) { e.printStackTrace(); } 
-	    		}} 
-	    );
-        
-        pool_Download_Upload_Tracker.submit(
-	    		new Runnable() {public void run() { 
-	    			try {updateTracker(tracker, trackerUpdateInterval);} 
-	    			catch (Exception e) { e.printStackTrace(); } 
-	    		}} 
-	    );
-        */
+        final updateTracker ut = new updateTracker(tracker, trackerUpdateInterval);
         
         Thread thread1 = new Thread(){
-        	{downloadClient.fetchFile(args[1]);}
+        	{downloadClient.run();}
         };
         Thread thread2 = new Thread(){
-        	{System.out.println("Server started running.");
-        		server.run();}
+        	{server.run();}
         }; 
         Thread thread3 = new Thread(){
-        	{updateTracker(tracker, trackerUpdateInterval);}
+        	{ut.run();}
         };
+        
+        
         
         thread1.start();
         thread2.start();
         thread3.start();
         
-        
-        
+        thread1.join();
+
 
     }
     
-    public static void updateTracker(Tracker tracker, int trackerUpdateInterval){
-    	while(true){
-    		try {
-    			System.out.println("Tracker updated!");
-				Thread.sleep(1000*(trackerUpdateInterval+1));
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+    public static class updateTracker implements Runnable{ 
+    	
+    	public static Tracker tracker;
+    	public static int trackerUpdateInterval;
+    	
+    	public updateTracker(Tracker tracker, int trackerUpdateInterval){
+    		updateTracker.tracker = tracker;
+    		updateTracker.trackerUpdateInterval = trackerUpdateInterval;
+    	}
+    	public void run(){
+    		while(true){
+    			try {
+    				System.out.println("Tracker updated!");
+    				Thread.sleep(1000*(trackerUpdateInterval+1));
+    			} catch (InterruptedException e) {
+    				e.printStackTrace();
+    			}
     		tracker.sendTrackerRequest(Event.NONE);
     	}
+    }
     }
 }

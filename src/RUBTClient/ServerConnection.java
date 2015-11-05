@@ -1,6 +1,5 @@
 package RUBTClient;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.net.Socket;
@@ -20,7 +19,6 @@ public class ServerConnection extends Thread{
 	public static TorrentInfo torrentInfo;
 	public static boolean[] pieceDownloaded;
 	public static ArrayList<Integer> listPiecesDownloaded;
-	private int lastPieceDownloaded;
 	public static byte[] fileOut;
 	public DataInputStream in;
 	public DataOutputStream out;
@@ -28,16 +26,16 @@ public class ServerConnection extends Thread{
 	public static Server serve;
 
 	public ServerConnection(Server serve, Socket conn) {
-		ServerConnection.fileLength = serve.fileLength;
+		ServerConnection.fileLength = Server.fileLength;
 		ServerConnection.serve = serve;
-		pieceLength = serve.pieceLength;
-		numPieces = serve.numPieces;
-		torrentInfo = serve.torrentInfo;
-		peers = serve.peers;
+		pieceLength = Server.pieceLength;
+		numPieces = Server.numPieces;
+		torrentInfo = Server.torrentInfo;
+		peers = Server.peers;
 		this.conn = conn;
-		listPiecesDownloaded = serve.listPiecesDownloaded;
-		fileOut = serve.fileOut;
-		ServerConnection.pieceDownloaded = serve.pieceDownloaded;
+		listPiecesDownloaded = Server.listPiecesDownloaded;
+		fileOut = Server.fileOut;
+		ServerConnection.pieceDownloaded = Server.pieceDownloaded;
 		try{
 			out = new DataOutputStream(conn.getOutputStream());
 			in =  new DataInputStream(conn.getInputStream());
@@ -81,7 +79,7 @@ public class ServerConnection extends Thread{
 			return;
 		}
 		System.out.println("Handshake verified for "+conn.getInetAddress());
-		Message handshakeOut = new Message(serve.tracker.peer_id.getBytes(), serve.torrentInfo.info_hash.array());
+		Message handshakeOut = new Message(Server.tracker.peer_id.getBytes(), Server.torrentInfo.info_hash.array());
 		try {
 			out.write(handshakeOut.message);
 		} catch (IOException e2) {
@@ -96,7 +94,6 @@ public class ServerConnection extends Thread{
 				e1.printStackTrace();
 			}
 			try {
-				System.out.println("Have piece = "+listPiecesDownloaded.get(i));
 				Message havePiece = new Message((byte) 4, 5, listPiecesDownloaded.get(i), "-1".getBytes(), -1, -1, -1, -1, -1, "-1".getBytes());
 				out.write(havePiece.message);
 			}
@@ -169,7 +166,7 @@ public class ServerConnection extends Thread{
 						Message piece = new Message((byte)7, 9 + len, -1, "-1".getBytes(), -1, -1, -1, index, begin, block);
 						out.write(piece.message);
 						out.flush();
-						System.out.println("Sent "+conn.getInetAddress()+" -->piece #"+index+" beginning at "+begin+" of length = "+len+".");
+						System.out.println("Sent "+conn.getInetAddress()+" --> piece #"+index+" beginning at "+begin+" of length = "+len+".");
 					}
 				}
 
