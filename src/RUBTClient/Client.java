@@ -1,5 +1,13 @@
 package RUBTClient;
 
+/**
+ * Group 24
+ * @author Rohan Vernekar
+ * @author Yaman Saadi
+ * @author Ramzy Saleh
+ *
+ */
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.File;
@@ -62,6 +70,7 @@ public class Client implements Runnable{
 			e.printStackTrace();
 		}
     }
+    
     /**
      * Download the file from a peer
      * @return the full file as a byte array
@@ -137,6 +146,15 @@ public class Client implements Runnable{
 
     }
 
+    /**
+     * 
+     * Method responsible for downloading pieces from the peer specified.
+     * This method is called for each peer we download from, and runs 
+     * in parallel. 
+     * 
+     * @param peer, peer which we want to download pieces from
+     * @throws Exception
+     */
     private static void downloadPiece(Peer peer) throws Exception{
 
         try {
@@ -329,7 +347,6 @@ public class Client implements Runnable{
      * user's directory.
      * 
      */
-
     public void checkFileState(){
     	
     	if(fp.exists()){
