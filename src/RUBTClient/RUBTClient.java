@@ -89,15 +89,17 @@ public class RUBTClient
     		updateTracker.trackerUpdateInterval = trackerUpdateInterval;
     	}
     	public void run(){
-    		while(true){
-    			try {
-    				System.out.println("Tracker updated!");
-    				Thread.sleep(1000*(trackerUpdateInterval+1));
-    			} catch (InterruptedException e) {
-    				e.printStackTrace();
+    		long startTime = System.nanoTime();
+    		long currentTime;
+    		int i = 0;
+    		while(!Client.userInput.equals("-1")){
+    			currentTime = System.nanoTime();
+    			if(startTime-currentTime>(i*(trackerUpdateInterval)+10)){
+        			System.out.println("Tracker updated!");        			
+        			tracker.sendTrackerRequest(Event.NONE);
     			}
-    		tracker.sendTrackerRequest(Event.NONE);
+    		}
+    		System.out.println("Tracker update quit!");
     	}
-    }
     }
 }
