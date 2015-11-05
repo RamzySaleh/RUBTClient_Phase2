@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 
 import GivenTools.TorrentInfo;
 
@@ -24,9 +25,11 @@ public class ServerConnection extends Thread{
 	public DataInputStream in;
 	public DataOutputStream out;
 	private Socket conn;
+	public static Server serve;
 
 	public ServerConnection(Server serve, Socket conn) {
-		fileLength = serve.fileLength;
+		ServerConnection.fileLength = serve.fileLength;
+		ServerConnection.serve = serve;
 		pieceLength = serve.pieceLength;
 		numPieces = serve.numPieces;
 		torrentInfo = serve.torrentInfo;
@@ -37,82 +40,98 @@ public class ServerConnection extends Thread{
 		try{
 			out = new DataOutputStream(conn.getOutputStream());
 			in =  new DataInputStream(conn.getInputStream());
+			System.out.println("_____________________");
+			System.out.println("Uploading to connection at port = "+conn.getPort());
+			System.out.println("Connection address = "+conn.getInetAddress());
 		}
 		catch(IOException e ){
-			System.out.println("could not get the input and output streams of a connection");
+			System.out.println("Could not get the input and output streams of a connection");
 			e.printStackTrace();
 		}
+		run();
 	}
 
 	public void run() {
 		byte[] handshake = null;
-		int length;
-
+		byte[] length = new byte[4];
+		int lenInt;
+		
 		// Read handshake from client
 		try{
-			length= in.readInt();
-			handshake= new byte[length];
+			lenInt = 68;
+			System.out.println("Length = "+lenInt);
+			handshake= new byte[lenInt];
 			in.readFully(handshake);
 		}
 		catch(IOException e){
-			System.out.println("could not read from inputstream");
+			System.out.println("Could not read from input stream.");
 			e.printStackTrace();
 		}
 
 		// Verify handshake
 		if(!Client.verifyHandshake(handshake)){
-			System.out.println("could not verify handshake");
+			System.out.println("Could not verify handshake.");
 			try{
 				conn.close();
 			}
 			catch(IOException e){
-				System.out.println("closing connection failed");
+				System.out.println("Closing connection failed.");
 				e.printStackTrace();
 			}
 			return;
 		}
 
+		Message handshakeOut = new Message(serve.tracker.peer_id.getBytes(), serve.torrentInfo.info_hash.array());
+		try {
+			out.write(handshakeOut.message);
+		} catch (IOException e2) {
+			System.out.println("Could not send handshake message!");
+			return;
+		}
 		// Send have message for each piece we have
 		for (int i = 0; i < listPiecesDownloaded.size(); i++) {
 			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			try {
+				System.out.println("Have piece = "+listPiecesDownloaded.get(i));
 				Message havePiece = new Message((byte) 4, 5, listPiecesDownloaded.get(i), "-1".getBytes(), -1, -1, -1, -1, -1, "-1".getBytes());
 				out.write(havePiece.message);
 			}
 			catch (IOException e) {
-				System.out.println("could not write to outstream");
+				System.out.println("Could not write to out stream.");
 				e.printStackTrace();
 			}
 		}
-
+		System.out.println("Sent have messages to "+conn.getInetAddress());
 		// Check if client sent interested message
-		for (int i = 0; i < 3; i++) {
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
 			byte[] interest = null;
+			
 			try {
-				length = in.readInt();
-				interest = new byte[length];
+				in.readFully(length);
+				lenInt = Client.byteArrToInt(length); 
+				System.out.println("Interest Length = "+lenInt);
+				interest = new byte[lenInt];
 				in.readFully(interest);
-			} catch (IOException e) {
-				System.out.println("could not read from inputstream");
-				e.printStackTrace();
-			}
-
-			if (interest[0] == (byte)2) {
-				// Client sent interested
-				break;
-			}
-
-			if ((interest[0] == (byte)3) || ((i == 2) && (!(interest[0] == (byte)2)))) {
-				// Client didn't send interested or sent not interested so close connection
 				try {
-					conn.close();
-					return;
-				}
-				catch (IOException e) {
-					System.out.println("could not close socket");
+					System.out.println("Line 123, interest = "+Message.decodeMessage(interest));
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
+			} catch (IOException e) {
+				System.out.println("Could not read from input stream.");
+				e.printStackTrace();
 			}
-		}
+
+
+		
 
 		// Send unchoke message to client
 		Message unchoke = new Message((byte)1, 1, -1, "-1".getBytes(), -1, -1, -1, -1, -1, "-1".getBytes());
@@ -121,7 +140,7 @@ public class ServerConnection extends Thread{
 			out.flush();
 		}
 		catch(IOException e){
-			System.out.println("could not write to outstream");
+			System.out.println("Could not write to outstream.");
 			e.printStackTrace();
 		}
 
@@ -129,8 +148,10 @@ public class ServerConnection extends Thread{
 		byte[] request = null;
 		try {
 			while (true) {
-				length = in.readInt();
-				request = new byte[length];
+				in.readFully(length);
+				lenInt = Client.byteArrToInt(length); 
+				System.out.println("Request Length = "+lenInt);
+				request = new byte[lenInt];
 				in.readFully(request);
 				ByteBuffer buffer = ByteBuffer.wrap(request);
 
@@ -147,12 +168,13 @@ public class ServerConnection extends Thread{
 					int begin = buffer.getInt();
 					int len = buffer.getInt();
 
-					if (pieceDownloaded[index]) {
+					if (pieceDownloaded[index] || len > 32768) {
 						// Send block to client
 						byte[] block = new byte[len];
 						System.arraycopy(fileOut, index*pieceLength+begin, block, 0, len);
 						Message piece = new Message((byte)7, 9 + len, -1, "-1".getBytes(), -1, -1, -1, index, begin, block);
 
+						System.out.println("Sent "+conn.getInetAddress()+" piece #"+index+" beginning at "+begin+" of length = "+length+".");
 						out.write(piece.message);
 						out.flush();
 					}
@@ -161,11 +183,11 @@ public class ServerConnection extends Thread{
 			}
 		}
 		catch (IOException e) {
-			System.out.println("could not read from inputstream");
+			System.out.println("Could not read from input stream.");
 			e.printStackTrace();
 		}
 		catch (Exception e) {
-			System.out.println("the message was not of the expected format");
+			System.out.println("The message received from the peer was not of the expected format.");
 			e.printStackTrace();
 		}
 
@@ -173,7 +195,7 @@ public class ServerConnection extends Thread{
 			conn.close();
 		}
 		catch (IOException e) {
-			System.out.println("could not close socket");
+			System.out.println("Could not close socket.");
 			e.printStackTrace();
 		}
 	}

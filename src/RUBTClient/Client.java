@@ -84,7 +84,7 @@ public class Client{
 
         if (alreadyDownloaded == numPieces){
         	System.out.println("Already Downloaded!");
-        	System.out.println("Download time = 0 seconds!!!!!");
+        	System.out.println("Download time = 0 seconds!");
         	File fileN = new File(fileName);
         	fp.renameTo(fileN);
         	return;
@@ -212,7 +212,7 @@ public class Client{
             	if (i == -1) return;
                 
             	
-            	if(i%10 == 0 && count!= 0){
+            	if(i%25 == 0 && count!= 0){
             		System.out.println("Enter -1 and enter to cancel download -->");
             	}
             	
@@ -243,8 +243,9 @@ public class Client{
                 // Verify SHA-1 for piece
                 if (verifyPiece(piece, i))
                 {
-                    System.out.println("Piece #"+i+" verified, downloaded from: "+peer.getIP());
+                    //System.out.println("Piece #"+i+" verified, downloaded from: "+peer.getIP());
                     pieceDownloaded[i] = true;
+                    listPiecesDownloaded.add(i);
                     System.arraycopy(piece, 0, fileOut, i * pieceLength, currentPieceLength);
                     updateSaveFile(piece,i);
                 }
@@ -274,7 +275,7 @@ public class Client{
         for (int i = 0; i < peers.size(); i++)
         {
                 String currentPeerIP = peers.get(i).getIP();
-                
+                System.out.println("Current peer # "+i+" = "+currentPeerIP);
                 if (currentPeerIP.equals("128.6.171.130") || currentPeerIP.equals("128.6.171.131"))
                 {
                 	peersToDownload.add(peers.get(i));                    
@@ -533,7 +534,7 @@ public class Client{
     private static void waitForUserInput(){
     	
     	BufferedReader bufIn = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Enter -1 and enter to cancel download -->");
+        System.out.println("Enter -1 and enter to stop. Download is now complete! -->");
         
         while(!userInput.equals("-1")){
         	try {
@@ -557,7 +558,7 @@ public class Client{
      * @param byteArr, the byte array
      * @return integer representation of byte array
      */
-    private int byteArrToInt(byte[] byteArr){
+    public static int byteArrToInt(byte[] byteArr){
     	return ByteBuffer.wrap(byteArr).getInt();
     }
     

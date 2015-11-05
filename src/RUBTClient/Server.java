@@ -44,18 +44,21 @@ public class Server extends Thread{
 	public void run(){
 		try{
 			serveSocket= new ServerSocket(port);
+			System.out.println("Server socket opened at port = "+port);
 			}
 			catch(IOException e){
-				System.out.println("could not listen on port");
+				System.out.println("Could not listen on port = "+port);
+				return;
 			}
 		ArrayList<Socket> peerSockets= new ArrayList<Socket>(5);
 		int ind=0;
 		while(true){
 			try{
-			peerSockets.add(ind,serveSocket.accept());
+				System.out.println("ind = "+ind);
+				peerSockets.add(ind,serveSocket.accept());
 			}catch(IOException e){
 				e.printStackTrace();
-				System.out.println("something went wrong with setting up a peer connection with server");
+				System.out.println("Something went wrong with setting up a peer connection with server.");
 			}
 			new ServerConnection(this,peerSockets.get(ind));
 			ind++;
