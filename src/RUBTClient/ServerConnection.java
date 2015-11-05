@@ -1,5 +1,13 @@
 package RUBTClient;
 
+/**
+ * Group 24
+ * @author Rohan Vernekar
+ * @author Yaman Saadi
+ * @author Ramzy Saleh
+ *
+ */
+
 import java.util.ArrayList;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -42,7 +50,13 @@ public class ServerConnection extends Thread{
 			e.printStackTrace();
 		}
 	}
-
+	
+	/**
+	 * 
+	 * This method is responsible for handshaking, unchoking, and piece messages
+	 * that are to be sent to the peer that is interested.
+	 * 
+	 */
 	public void run() {
 		byte[] handshake = null;
 		byte[] length = new byte[4];
@@ -102,22 +116,22 @@ public class ServerConnection extends Thread{
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
-			byte[] interest = null;
-			
-			try {
-				in.readFully(length);
-				lenInt = Client.byteArrToInt(length); 
-				interest = new byte[lenInt];
-				in.readFully(interest);
-
-			} catch (IOException e) {
-				System.out.println("Could not read from input stream.");
-				e.printStackTrace();
-			}
-
-
 		
-
+		byte[] interest = null;
+			
+		// Read the interested message from the peer.
+		try {
+			in.readFully(length);
+			lenInt = Client.byteArrToInt(length); 
+			interest = new byte[lenInt];
+			in.readFully(interest);
+			
+		} catch (IOException e) {
+			System.out.println("Could not read from input stream.");
+			e.printStackTrace();
+		}
+			
+			
 		// Send unchoke message to client
 		Message unchoke = new Message((byte)1, 1, -1, "-1".getBytes(), -1, -1, -1, -1, -1, "-1".getBytes());
 		try{
