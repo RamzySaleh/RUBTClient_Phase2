@@ -1,5 +1,13 @@
 package RUBTClient;
 
+/**
+ * Group 24
+ * @author Rohan Vernekar
+ * @author Yaman Saadi
+ * @author Ramzy Saleh
+ *
+ */
+
 import java.net.ServerSocket;
 import java.io.*;
 import java.util.*;
@@ -7,7 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.net.Socket;
 
-/* The server needs to be able to send have messages to all connected peers whenever a new piece gets verified.  I created an arraylist that contains a list
+/** The server needs to be able to send have messages to all connected peers whenever a new piece gets verified.  I created an arraylist that contains a list
  * of verified pieces, and an int to keep track of the last piece downloaded.  periodically, check to see if the last element is different then the recorded last element
  * if it is, send have messages for all pieces between the index of previous last, and the index of current length-1.
  */
