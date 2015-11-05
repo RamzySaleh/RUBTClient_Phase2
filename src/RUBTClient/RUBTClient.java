@@ -23,24 +23,32 @@ public class RUBTClient
     		return;
     	}
     	
+    	// Start the tracker class. Decodes the torrent file. 
     	final Tracker tracker = new Tracker(args[0]);
         tracker.sendTrackerRequest(Event.NONE);
         
-
+        // Determine the interval length for updates.
         final int trackerUpdateInterval = Math.min(tracker.interval/2, 180/2);
         
+        /** Create a file pointer to the temporary file where we will save verified pieces
+         * in case the user cancels the download.
+         */
+       
         File fp = new File("File.tmp");
         
+        // Create a Client object.
         final Client downloadClient = new Client(tracker, fp, args[1]);
+        
+        // Check if the file was ever downloaded before. If so, load verified pieces.
         downloadClient.checkFileState();
         
 
         final Server server = new Server(tracker);
         
-        
+
         final updateTracker ut = new updateTracker(tracker, trackerUpdateInterval);
         
-        
+        // Pool that includes upload, download, and tracker update threads.
         ExecutorService pool = Executors.newFixedThreadPool(3);
         
         Runnable r1 = new Runnable()
@@ -80,6 +88,13 @@ public class RUBTClient
 
     }
     
+    /**
+     * 
+     * This class is responsible for updating the tracker at the appropriate
+     * interval. A message is sent every update interval time and stops
+     * when the user enters '-1'. 
+     *
+     */
     public static class updateTracker implements Runnable{ 
     	
     	public static Tracker tracker;
