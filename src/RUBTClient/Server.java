@@ -38,7 +38,7 @@ public class Server extends Thread{
 		numPieces = (int)Math.ceil((double)torrentInfo.file_length / (double)torrentInfo.piece_length);
 		pieceDownloaded=downloadClient.pieceDownloaded;
 		listPiecesDownloaded=downloadClient.listPiecesDownloaded;
-		Server.fileOut = downloadClient.fileOut;
+		Server.fileOut = Client.fileOut;
 		}
 	
 	public void run(){
@@ -54,7 +54,6 @@ public class Server extends Thread{
 		int ind=0;
 		while(true){
 			try{
-				System.out.println("ind = "+ind);
 				peerSockets.add(ind,serveSocket.accept());
 			}catch(IOException e){
 				e.printStackTrace();

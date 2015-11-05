@@ -37,12 +37,13 @@ public class ServerConnection extends Thread{
 		this.conn = conn;
 		listPiecesDownloaded = serve.listPiecesDownloaded;
 		fileOut = serve.fileOut;
+		ServerConnection.pieceDownloaded = serve.pieceDownloaded;
 		try{
 			out = new DataOutputStream(conn.getOutputStream());
 			in =  new DataInputStream(conn.getInputStream());
 			System.out.println("_____________________");
-			System.out.println("Uploading to connection at port = "+conn.getPort());
-			System.out.println("Connection address = "+conn.getInetAddress());
+			System.out.println("Uploading to peer at port = "+conn.getPort());
+			System.out.println("Peer's IP address = "+conn.getInetAddress());
 		}
 		catch(IOException e ){
 			System.out.println("Could not get the input and output streams of a connection");
@@ -59,7 +60,6 @@ public class ServerConnection extends Thread{
 		// Read handshake from client
 		try{
 			lenInt = 68;
-			System.out.println("Length = "+lenInt);
 			handshake= new byte[lenInt];
 			in.readFully(handshake);
 		}
@@ -80,7 +80,7 @@ public class ServerConnection extends Thread{
 			}
 			return;
 		}
-
+		System.out.println("Handshake verified for "+conn.getInetAddress());
 		Message handshakeOut = new Message(serve.tracker.peer_id.getBytes(), serve.torrentInfo.info_hash.array());
 		try {
 			out.write(handshakeOut.message);
@@ -102,7 +102,7 @@ public class ServerConnection extends Thread{
 			}
 			catch (IOException e) {
 				System.out.println("Could not write to out stream.");
-				e.printStackTrace();
+				return;
 			}
 		}
 		System.out.println("Sent have messages to "+conn.getInetAddress());
@@ -117,14 +117,9 @@ public class ServerConnection extends Thread{
 			try {
 				in.readFully(length);
 				lenInt = Client.byteArrToInt(length); 
-				System.out.println("Interest Length = "+lenInt);
 				interest = new byte[lenInt];
 				in.readFully(interest);
-				try {
-					System.out.println("Line 123, interest = "+Message.decodeMessage(interest));
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+
 			} catch (IOException e) {
 				System.out.println("Could not read from input stream.");
 				e.printStackTrace();
@@ -150,7 +145,6 @@ public class ServerConnection extends Thread{
 			while (true) {
 				in.readFully(length);
 				lenInt = Client.byteArrToInt(length); 
-				System.out.println("Request Length = "+lenInt);
 				request = new byte[lenInt];
 				in.readFully(request);
 				ByteBuffer buffer = ByteBuffer.wrap(request);
@@ -168,15 +162,14 @@ public class ServerConnection extends Thread{
 					int begin = buffer.getInt();
 					int len = buffer.getInt();
 
-					if (pieceDownloaded[index] || len > 32768) {
+					if (pieceDownloaded[index] && len < 32768) {
 						// Send block to client
 						byte[] block = new byte[len];
 						System.arraycopy(fileOut, index*pieceLength+begin, block, 0, len);
 						Message piece = new Message((byte)7, 9 + len, -1, "-1".getBytes(), -1, -1, -1, index, begin, block);
-
-						System.out.println("Sent "+conn.getInetAddress()+" piece #"+index+" beginning at "+begin+" of length = "+length+".");
 						out.write(piece.message);
 						out.flush();
+						System.out.println("Sent "+conn.getInetAddress()+" -->piece #"+index+" beginning at "+begin+" of length = "+len+".");
 					}
 				}
 
