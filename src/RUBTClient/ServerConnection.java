@@ -47,7 +47,6 @@ public class ServerConnection extends Thread{
 			System.out.println("Could not get the input and output streams of a connection");
 			e.printStackTrace();
 		}
-		run();
 	}
 
 	public void run() {
@@ -139,7 +138,7 @@ public class ServerConnection extends Thread{
 		// Read request messages
 		byte[] request = null;
 		try {
-			while (true) {
+			while (!Client.userInput.equals("-1")) {
 				in.readFully(length);
 				lenInt = Client.byteArrToInt(length); 
 				request = new byte[lenInt];
@@ -169,8 +168,8 @@ public class ServerConnection extends Thread{
 						System.out.println("Sent "+conn.getInetAddress()+" --> piece #"+index+" beginning at "+begin+" of length = "+len+".");
 					}
 				}
-
 			}
+	    	System.out.println("Server quit!");
 		}
 		catch (IOException e) {
 			System.out.println("Could not read from input stream.");
