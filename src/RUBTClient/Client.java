@@ -145,7 +145,7 @@ public class Client implements Runnable{
 
         try {
             // Create socket and connect to peer
-            System.out.println("Connecting to peer: " + peer.getIP());
+            System.out.println("Connecting to peer to download from: " + peer.getIP());
             peer.connectPeer();
 
             

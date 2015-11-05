@@ -1,6 +1,8 @@
 package RUBTClient;
 
 import java.io.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import RUBTClient.Tracker.Event;
 
@@ -39,23 +41,40 @@ public class RUBTClient
         
         final updateTracker ut = new updateTracker(tracker, trackerUpdateInterval);
         
-        Thread thread1 = new Thread(){
-        	{downloadClient.run();}
+        
+        Executor pool = Executors.newFixedThreadPool(3);
+        
+        Runnable r1 = new Runnable()
+        {
+           @Override
+           public void run()
+           {
+        	   downloadClient.run();
+           }
         };
-        Thread thread2 = new Thread(){
-        	{server.run();}
-        }; 
-        Thread thread3 = new Thread(){
-        	{ut.run();}
+       pool.execute(r1);
+        
+        Runnable r2 = new Runnable()
+        {
+           @Override
+           public void run()
+           {
+        	   server.run();
+           }
         };
+        pool.execute(r2);
         
+        Runnable r3 = new Runnable()
+        {
+           @Override
+           public void run()
+           {
+        	   ut.run();
+           }
+        };
+        pool.execute(r3);
         
-        
-        thread1.start();
-        thread2.start();
-        thread3.start();
-        
-        thread1.join();
+       
 
 
     }
