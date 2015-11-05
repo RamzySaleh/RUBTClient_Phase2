@@ -144,7 +144,7 @@ public class Client{
             Message handshake = new Message(peer_id.getBytes(), torrentInfo.info_hash.array());
 
             // Send handshake to peers
-            System.out.println("Sending handshake");
+            System.out.println("Sending handshake to peer: "+peer.getIP());
             peer.out.write(handshake.message);
             peer.out.flush();
 
@@ -177,7 +177,7 @@ public class Client{
                
                 if (response_id == 1)
                 {
-                    System.out.println("Peer unchoked");
+                    System.out.println("Peer at: "+peer.getIP()+" unchoked.");
                     break;
                 }
                 else
@@ -212,7 +212,7 @@ public class Client{
             	if (i == -1) return;
                 
             	
-            	if(i%25 == 0 && count!= 0){
+            	if(i%50 == 0 && count!= 0){
             		System.out.println("Enter -1 and enter to cancel download -->");
             	}
             	
@@ -243,7 +243,7 @@ public class Client{
                 // Verify SHA-1 for piece
                 if (verifyPiece(piece, i))
                 {
-                    //System.out.println("Piece #"+i+" verified, downloaded from: "+peer.getIP());
+                    System.out.println("Piece #"+i+" verified, downloaded from: "+peer.getIP());
                     pieceDownloaded[i] = true;
                     listPiecesDownloaded.add(i);
                     System.arraycopy(piece, 0, fileOut, i * pieceLength, currentPieceLength);
@@ -275,7 +275,6 @@ public class Client{
         for (int i = 0; i < peers.size(); i++)
         {
                 String currentPeerIP = peers.get(i).getIP();
-                System.out.println("Current peer # "+i+" = "+currentPeerIP);
                 if (currentPeerIP.equals("128.6.171.130") || currentPeerIP.equals("128.6.171.131"))
                 {
                 	peersToDownload.add(peers.get(i));                    
