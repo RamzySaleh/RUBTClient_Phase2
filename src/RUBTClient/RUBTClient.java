@@ -1,7 +1,7 @@
 package RUBTClient;
 
 import java.io.*;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import RUBTClient.Tracker.Event;
@@ -42,7 +42,7 @@ public class RUBTClient
         final updateTracker ut = new updateTracker(tracker, trackerUpdateInterval);
         
         
-        Executor pool = Executors.newFixedThreadPool(3);
+        ExecutorService pool = Executors.newFixedThreadPool(3);
         
         Runnable r1 = new Runnable()
         {
@@ -74,8 +74,10 @@ public class RUBTClient
         };
         pool.execute(r3);
         
-       
-
+        while(!Client.userInput.equals("-1")){
+        	Thread.sleep(700);
+        }
+        pool.shutdown();
 
     }
     

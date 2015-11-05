@@ -1,6 +1,7 @@
 package RUBTClient;
 
 import java.net.ServerSocket;
+import java.net.SocketException;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -56,6 +57,7 @@ public class Server extends Thread implements Runnable{
 		
 		int ind=0;
 		while(!Client.userInput.equals("-1")){
+
 			try{
 				peerSockets.add(ind,serveSocket.accept());
 			}catch(IOException e){
