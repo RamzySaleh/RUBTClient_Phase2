@@ -16,7 +16,6 @@ import RUBTClient.Tracker.Event;
 public class RUBTClient
 {
 
-
     public static void main(final String[] args) throws Exception
     {
     	if (args.length < 2){
@@ -36,7 +35,7 @@ public class RUBTClient
         downloadClient.checkFileState();
         
 
-        final Server server = new Server(tracker, downloadClient);
+        final Server server = new Server(tracker);
         
         
         final updateTracker ut = new updateTracker(tracker, trackerUpdateInterval);

@@ -22,8 +22,8 @@ import RUBTClient.Tracker.Event;
 
 public class Client implements Runnable{
 	
-	public static Tracker tracker;
-	public static List<Peer> peers;
+	private static Tracker tracker;
+	private static List<Peer> peers;
 	private static TorrentInfo torrentInfo;
     private static String peer_id;
     public static byte[] fileOut;
@@ -39,9 +39,9 @@ public class Client implements Runnable{
    
     
     public Client (Tracker tracker, File fp, String fileName){
-    	Client.tracker = tracker;
+    	this.tracker = tracker;
     	Client.torrentInfo = tracker.torrentInfo;
-    	Client.peers = tracker.peers;
+    	this.peers = tracker.peers;
     	Client.fp = fp;
 		Client.fileOut = new byte[torrentInfo.file_length];
 		Client.pieceLength = torrentInfo.piece_length;
@@ -99,9 +99,6 @@ public class Client implements Runnable{
         	return;
         }
 
-        	
-        
-
         	// Send HTTP GET to tracker to indicate download started
         	tracker.sendTrackerRequest(Event.STARTED);
         	long timeBegin = System.nanoTime();
@@ -139,7 +136,6 @@ public class Client implements Runnable{
         
 
     }
-    
 
     private static void downloadPiece(Peer peer) throws Exception{
 
@@ -199,8 +195,6 @@ public class Client implements Runnable{
                 }
             }
 
-
-
             int i;
             int count = alreadyDownloaded;
             // Loop through each piece
@@ -245,8 +239,6 @@ public class Client implements Runnable{
                 }
                 
                 byte[] piece = new byte[currentPieceLength];
-                
-               
                 
                 piece = downloadPiece(peer,i);
                 

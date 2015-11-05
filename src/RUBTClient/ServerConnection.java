@@ -1,7 +1,6 @@
 package RUBTClient;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.io.DataInputStream;
@@ -10,32 +9,27 @@ import java.io.IOException;
 
 import GivenTools.TorrentInfo;
 
-
 public class ServerConnection extends Thread{
-	public static int fileLength;
-	public static int pieceLength;
-	public static int numPieces;
-	public static List<Peer> peers;
-	public static TorrentInfo torrentInfo;
-	public static boolean[] pieceDownloaded;
-	public static ArrayList<Integer> listPiecesDownloaded;
-	public static byte[] fileOut;
-	public DataInputStream in;
-	public DataOutputStream out;
-	private Socket conn;
-	public static Server serve;
 
-	public ServerConnection(Server serve, Socket conn) {
-		ServerConnection.fileLength = Server.fileLength;
-		ServerConnection.serve = serve;
-		pieceLength = Server.pieceLength;
-		numPieces = Server.numPieces;
-		torrentInfo = Server.torrentInfo;
-		peers = Server.peers;
+	private Tracker tracker;
+	private int pieceLength;
+	private TorrentInfo torrentInfo;
+	private boolean[] pieceDownloaded;
+	private ArrayList<Integer> listPiecesDownloaded;
+	private byte[] fileOut;
+	private DataInputStream in;
+	private DataOutputStream out;
+	private Socket conn;
+
+	public ServerConnection(Tracker tracker, Socket conn) {
+		this.tracker = tracker;
+		torrentInfo = tracker.torrentInfo;
+		pieceLength = torrentInfo.piece_length;
+		pieceDownloaded=Client.pieceDownloaded;
+		listPiecesDownloaded=Client.listPiecesDownloaded;
+		fileOut = Client.fileOut;
 		this.conn = conn;
-		listPiecesDownloaded = Server.listPiecesDownloaded;
-		fileOut = Server.fileOut;
-		ServerConnection.pieceDownloaded = Server.pieceDownloaded;
+
 		try{
 			out = new DataOutputStream(conn.getOutputStream());
 			in =  new DataInputStream(conn.getInputStream());
@@ -78,7 +72,7 @@ public class ServerConnection extends Thread{
 			return;
 		}
 		System.out.println("Handshake verified for "+conn.getInetAddress());
-		Message handshakeOut = new Message(Server.tracker.peer_id.getBytes(), Server.torrentInfo.info_hash.array());
+		Message handshakeOut = new Message(tracker.peer_id.getBytes(), torrentInfo.info_hash.array());
 		try {
 			out.write(handshakeOut.message);
 		} catch (IOException e2) {

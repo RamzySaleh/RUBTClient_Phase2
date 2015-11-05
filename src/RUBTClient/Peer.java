@@ -37,7 +37,6 @@ public class Peer
         this.peerID = peerID;
     }
 
-
     public void connectPeer() throws IOException
     {
         peerSocket = new Socket(ip, port);

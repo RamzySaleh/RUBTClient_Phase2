@@ -19,8 +19,7 @@ public class Message {
 	private final static int bitfield_ID = 5;
 	private final static int request_ID = 6;
 	private final static int piece_ID = 7;
-	
-	
+
 	public byte[] message;
 	
 	/**
