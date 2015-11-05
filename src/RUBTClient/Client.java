@@ -35,7 +35,7 @@ public class Client implements Runnable{
     public static File fp;
     public static boolean[] pieceDownloaded;
     public static ArrayList<Integer> listPiecesDownloaded;
-    private static String userInput = "";
+    public static String userInput = "";
    
     
     public Client (Tracker tracker, File fp, String fileName){
@@ -557,7 +557,7 @@ public class Client implements Runnable{
 				e.printStackTrace();
 			}
         }
-    	
+    	System.out.println("Download client quit!");
     }
     
     /**
